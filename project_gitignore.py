@@ -25,12 +25,12 @@ def find_gitignores(folder):
                  in os.walk(folder)
                  if '.gitignore' in files]
 
-def update_exclude_patterns(view):
+def update_exclude_patterns(window):
     """
     Based on the current project, scrape up the gitignores and add their rules
     to the folder_exclude_patterns value in the project for each folder
     """
-    window = view.window()
+    print("--------------%s-------------" % "here")
 
     project_data = window.project_data()
 
@@ -72,6 +72,10 @@ def update_exclude_patterns(view):
                 if line == "" or line.startswith("#"):
                     continue
 
+                # Three cases:
+                # startswith /, means the folder at this root should be ignored
+                # contains a /, means it's a folder to be ignored
+                # else, it's a filetype or a folder, so add to both
                 if line.startswith("/"):
                     ignore_folders.append(os.path.join(path, line[1:]))
                 elif "/" in line:
@@ -80,18 +84,23 @@ def update_exclude_patterns(view):
                     ignore_folders.append(line)
                     ignore_files.append(line)
 
+        # list(set(x)) removes duplicates
         folder["folder_exclude_patterns"] += list(set(ignore_folders))
         folder["file_exclude_patterns"] += list(set(ignore_files))
 
     window.set_project_data(project_data)
 
-class GitIgnoreListener(sublime_plugin.EventListener):
+class GitignoreListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
         """
         Updates the exclude patterns for a project only if the file saved was a .gitignore
         """
         if view.file_name().endswith(".gitignore"):
-            update_exclude_patterns(view)
+            update_exclude_patterns(view.window())
 
 # TODO on start
+def plugin_loaded():
+    update_exclude_patterns(sublime.active_window())
+
 # TODO on project switch
+
