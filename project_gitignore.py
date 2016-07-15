@@ -30,12 +30,19 @@ def update_exclude_patterns(window):
     Based on the current project, scrape up the gitignores and add their rules
     to the folder_exclude_patterns value in the project for each folder
     """
-    print("--------------%s-------------" % "here")
+    # settings = sublime.load_settings("Preferences.sublime-settings")
 
     project_data = window.project_data()
 
-    # TODO ephemeral projects
-    project_path = window.extract_variables()["project_path"]
+    if not project_data:
+        return
+
+    # Modify Project File
+    if "project_path" in window.extract_variables():
+        project_path = window.extract_variables()["project_path"]
+    # No project file
+    else:
+        project_path = "."
 
     for folder in project_data["folders"]:
         # save any manually/previously set patterns
@@ -72,14 +79,15 @@ def update_exclude_patterns(window):
                 if line == "" or line.startswith("#"):
                     continue
 
-                # Three cases:
+                # Three cases I can think of:
                 # startswith /, means the folder at this root should be ignored
-                # contains a /, means it's a folder to be ignored
+                # contains a /, means it's a specific folder or file to be ignored
                 # else, it's a filetype or a folder, so add to both
                 if line.startswith("/"):
                     ignore_folders.append(os.path.join(path, line[1:]))
                 elif "/" in line:
                     ignore_folders.append(os.path.join(path, line))
+                    ignore_files.append(os.path.join(path, line))
                 else:
                     ignore_folders.append(line)
                     ignore_files.append(line)
@@ -88,7 +96,10 @@ def update_exclude_patterns(window):
         folder["folder_exclude_patterns"] += list(set(ignore_folders))
         folder["file_exclude_patterns"] += list(set(ignore_files))
 
+    # TODO ideally this wouldn't modify or only temporarily modifies the sublime-project file
     window.set_project_data(project_data)
+    print(window.project_data())
+
 
 class GitignoreListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
@@ -99,8 +110,9 @@ class GitignoreListener(sublime_plugin.EventListener):
             update_exclude_patterns(view.window())
 
 # TODO on start
-def plugin_loaded():
-    update_exclude_patterns(sublime.active_window())
+# def plugin_loaded():
+    # update_exclude_patterns(sublime.active_window())
 
 # TODO on project switch
+# TODO toggle off
 
